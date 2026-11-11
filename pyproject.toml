@@ -1,0 +1,20 @@
+[project]
+name = "branch-sites"
+version = "0.1.0"
+description = "Publishes every branch of a Git repository as a static website"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest", "pytest-timeout", "ruff"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alle websites</title>
+<link rel="icon" type="image/svg+xml" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/favicon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/css/global.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/cdn/autoloader.js"></script>
+</head>
+<body>
+<nldd-shell>
+  <nldd-page>
+    <nldd-simple-section>
+      <nldd-title size="1" heading-level="1" text="Alle websites"></nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-text color="secondary">Elke branch in de repository is een eigen website. <nldd-link href="/_uitleg/" text="Zo zet je je eigen website erbij"></nldd-link>.</nldd-text>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-search-field id="zoek" placeholder="Zoek op teamnaam, titel of auteur"></nldd-search-field>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-text id="aantal" size="sm" color="secondary" aria-live="polite"></nldd-text>
+      <nldd-spacer size="4"></nldd-spacer>
+      <nldd-list id="sites" accessible-label="Websites">
+        <nldd-inline-dialog slot="empty" icon="document" text="Nog geen websites" supporting-text="Push een branch naar de repository, dan verschijnt die hier binnen een paar minuten."></nldd-inline-dialog>
+        <nldd-inline-dialog slot="no-results" icon="magnifier" text="Geen website gevonden" supporting-text="Pas je zoekopdracht aan."></nldd-inline-dialog>
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-shell>
+<script>
+  // Names, titles and commit messages come from participants: set them as attributes, never as HTML.
+  const search = document.getElementById("zoek");
+  const list = document.getElementById("sites");
+  const count = document.getElementById("aantal");
+  const dateFormat = new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" });
+  let query = "";
+
+  function row(site) {
+    const item = document.createElement("nldd-list-item");
+    item.setAttribute("href", site.path);
+    item.dataset.haystack = [site.name, site.title, site.author].join(" ").toLowerCase();
+    const text = document.createElement("nldd-text-cell");
+    text.setAttribute("text", site.title || site.name);
+    text.setAttribute("supporting-text", `${site.name} · ${site.author} · ${dateFormat.format(new Date(site.date))}`);
+    const spacer = document.createElement("nldd-spacer-cell");
+    spacer.setAttribute("size", "12");
+    const chevron = document.createElement("nldd-icon-cell");
+    chevron.setAttribute("size", "20");
+    chevron.setAttribute("color", "secondary");
+    chevron.setAttribute("icon", "chevron-right");
+    item.append(text, spacer, chevron);
+    return item;
+  }
+
+  function applyFilter() {
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const items = [...list.querySelectorAll("nldd-list-item")];
+    let shown = 0;
+    for (const item of items) {
+      item.hidden = !terms.every(t => item.dataset.haystack.includes(t));
+      if (!item.hidden) shown++;
+    }
+    count.textContent = terms.length ? `${shown} van ${items.length} websites` : `${items.length} websites`;
+  }
+
+  async function load() {
+    try {
+      const res = await fetch("/_index.json", { cache: "no-store" });
+      if (!res.ok) return;
+      const { sites } = await res.json();
+      list.querySelectorAll("nldd-list-item").forEach(item => item.remove());
+      list.append(...sites.map(row));
+      applyFilter();
+    } catch (e) {
+      // Keep the current list; the next refresh tries again.
+    }
+  }
+
+  search.addEventListener("input", event => {
+    query = event.detail?.value ?? event.target?.value ?? "";
+    applyFilter();
+  });
+  load();
+  setInterval(load, 60000);
+</script>
+</body>
+</html>

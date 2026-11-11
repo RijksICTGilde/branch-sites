@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Je eigen website</title>
+<link rel="icon" type="image/svg+xml" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/favicon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/css/global.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/cdn/autoloader.js"></script>
+</head>
+<body>
+<nldd-shell>
+  <nldd-page>
+    <nldd-simple-section>
+      <nldd-link href="/" start-icon="chevron-left" text="Alle websites"></nldd-link>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="1" heading-level="1" text="Je eigen website"></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text>
+        <p>Elke branch in de repository <a data-repo-link href="#"><span data-repo-name>van de demo</span></a> is een eigen website. Je maakt een branch met de naam van je team, zet er HTML, CSS en afbeeldingen in en pusht. Binnen een paar minuten staat je website op <code><span data-origin></span>/<em>jouw-team</em>/</code>.</p>
+
+        <h2>Wat heb je nodig</h2>
+        <ul>
+          <li><strong>git</strong>, en liefst ook de <a href="https://cli.github.com/">GitHub CLI</a> (<code>gh</code>).</li>
+          <li>Een <strong>token</strong> waarmee je naar de repository mag pushen. Die krijg je van de organisatie. Zet hem in de env var <code>GH_TOKEN</code>, niet in een bestand in de repository.</li>
+        </ul>
+
+        <h2>1. Token instellen en inloggen</h2>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template># De token die je van de organisatie kreeg
+export GH_TOKEN="github_pat_..."
+
+# gh gebruikt GH_TOKEN vanzelf; controleer dat het werkt
+gh auth status
+
+# Laat git dezelfde token gebruiken
+gh auth setup-git</nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h2>2. Repository ophalen</h2>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>gh repo clone {{repo}}
+cd {{name}}</nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h2>3. Eigen branch maken en erop overstappen</h2>
+        <p>De naam van de branch wordt het adres van je website. Gebruik kleine letters, cijfers en streepjes, bijvoorbeeld <code>team-zonnebloem</code>.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template># Nieuwe branch maken en er meteen op overstappen
+git switch -c team-zonnebloem
+
+# Bestaat de branch al (bijvoorbeeld van een teamgenoot)? Dan alleen overstappen
+git switch team-zonnebloem</nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h2>4. Website maken, committen en pushen</h2>
+        <p>Zet een <code>index.html</code> in de root van de repository: dat is de startpagina. Gebruik <strong>relatieve paden</strong>, dus <code>style.css</code> of <code>img/logo.png</code>, en niet <code>/style.css</code>. Je website staat in een submap, en een pad met een <code>/</code> ervoor wijst naar de indexpagina.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>git add .
+git commit -m "Eerste versie van onze website"
+
+# De eerste keer: koppel je branch aan GitHub
+git push -u origin team-zonnebloem
+
+# Daarna is dit genoeg
+git push</nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h2>Zonder de GitHub CLI</h2>
+        <p>Heb je geen <code>gh</code>, haal de repository dan op met de token in de URL. Let op: de token komt dan in <code>.git/config</code> te staan. Deel die map dus niet.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>export GH_TOKEN="github_pat_..."
+git clone "https://x-access-token:${GH_TOKEN}@github.com/{{repo}}.git"
+cd {{name}}</nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h2>Goed om te weten</h2>
+        <ul>
+          <li>Na een push duurt het een paar minuten voordat je wijziging zichtbaar is. Ververs daarna de pagina.</li>
+          <li>Verwijder je de branch op GitHub, dan verdwijnt ook je website.</li>
+          <li>Alleen bestanden die in git staan komen online. Er is geen server en geen build: wat je commit, is wat je ziet.</li>
+        </ul>
+      </nldd-rich-text>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-shell>
+<script>
+  // Fills the repository into the examples. The URL comes from the syncer, without credentials.
+  document.querySelectorAll("[data-origin]").forEach(el => { el.textContent = location.origin; });
+
+  fetch("/_index.json", { cache: "no-store" })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(({ repo }) => {
+      const match = /github\.com[/:]([^/]+\/[^/]+?)(\.git)?\/?$/.exec(repo || "");
+      if (!match) return;
+      const full = match[1];
+      const name = full.split("/")[1];
+      document.querySelectorAll("[data-template]").forEach(el => {
+        el.textContent = el.textContent.replaceAll("{{repo}}", full).replaceAll("{{name}}", name);
+      });
+      document.querySelectorAll("[data-repo-name]").forEach(el => { el.textContent = full; });
+      document.querySelectorAll("[data-repo-link]").forEach(el => { el.href = `https://github.com/${full}`; });
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>
