@@ -15,7 +15,7 @@ De container haalt de wijzigingen zelf op, er hoeft niets naar binnen te pushen.
 1. Elke `POLL_INTERVAL_MINUTES` doet de syncer een `git fetch --depth=1 --prune` van alle branches naar een bare repository in `/tmp/work`.
 2. Een branch met een nieuwe commit wordt met `git archive` uitgepakt naar `/tmp/sites/.data/<slug>-<sha>`. Daarna wordt de symlink `/tmp/sites/<slug>` in één rename omgezet, dus nginx serveert nooit een half uitgepakte site.
 3. Een verwijderde branch verdwijnt van de pagina.
-4. `/tmp/sites/_index.json` beschrijft alle sites (naam, titel uit `<title>`, auteur, datum, commit message). De indexpagina leest die en filtert in de browser.
+4. `/tmp/sites/_index.json` beschrijft alle sites (naam, titel uit `<title>`, datum van de laatste commit, commit message). De indexpagina leest die en filtert in de browser.
 
 Bij het starten begint de syncer met een lege `/tmp/sites` en pakt hij alles opnieuw uit. Er is dus geen persistente opslag nodig: een `emptyDir` volstaat.
 

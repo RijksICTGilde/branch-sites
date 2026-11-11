@@ -26,7 +26,7 @@ GIT_TIMEOUT = 300
 SLUG_MAX = 63
 TITLE_SCAN_BYTES = 64 * 1024
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
-REF_FORMAT = "%(refname:lstrip=2)%00%(objectname)%00%(committerdate:iso-strict)%00%(authorname)%00%(subject)"
+REF_FORMAT = "%(refname:lstrip=2)%00%(objectname)%00%(committerdate:iso-strict)%00%(subject)"
 
 log = logging.getLogger("branch-sites")
 
@@ -40,7 +40,6 @@ class Branch:
     name: str
     sha: str
     date: str
-    author: str
     subject: str
 
 

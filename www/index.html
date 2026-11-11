@@ -16,7 +16,7 @@
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-text color="secondary">Elke branch in de repository is een eigen website. <nldd-link href="/_uitleg/" text="Zo zet je je eigen website erbij"></nldd-link>.</nldd-text>
       <nldd-spacer size="24"></nldd-spacer>
-      <nldd-search-field id="zoek" placeholder="Zoek op teamnaam, titel of auteur"></nldd-search-field>
+      <nldd-search-field id="zoek" placeholder="Zoek op teamnaam of titel"></nldd-search-field>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-text id="aantal" size="sm" color="secondary" aria-live="polite"></nldd-text>
       <nldd-spacer size="4"></nldd-spacer>
@@ -38,10 +38,10 @@
   function row(site) {
     const item = document.createElement("nldd-list-item");
     item.setAttribute("href", site.path);
-    item.dataset.haystack = [site.name, site.title, site.author].join(" ").toLowerCase();
+    item.dataset.haystack = [site.name, site.title].join(" ").toLowerCase();
     const text = document.createElement("nldd-text-cell");
     text.setAttribute("text", site.title || site.name);
-    text.setAttribute("supporting-text", `${site.name} · ${site.author} · ${dateFormat.format(new Date(site.date))}`);
+    text.setAttribute("supporting-text", `${site.name} · laatst bijgewerkt op ${dateFormat.format(new Date(site.date))}`);
     const spacer = document.createElement("nldd-spacer-cell");
     spacer.setAttribute("size", "12");
     const chevron = document.createElement("nldd-icon-cell");

@@ -104,7 +104,7 @@ def test_publishes_every_branch_with_index(syncer: Syncer, origin: Origin) -> No
     assert sites["team-zon"]["title"] == "Zon & Maan"
     assert sites["team-zon"]["name"] == "Team/Zon"
     assert sites["team-zon"]["path"] == "/team-zon/"
-    assert sites["team-zon"]["author"] == "Team Test"
+    assert "author" not in sites["team-zon"]
 
 
 def test_unchanged_repository_changes_nothing(syncer: Syncer) -> None:
