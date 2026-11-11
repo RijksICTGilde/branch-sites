@@ -31,7 +31,9 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-shell>
-<script>
+<script type="module">
+  import { discover } from "https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/cdn/autoloader.js";
+
   // Page names come from participants: set them as attributes, never as HTML.
   const path = location.pathname;
   document.getElementById("map").textContent = decodeURIComponent(path);
@@ -50,14 +52,23 @@
     return item;
   }
 
+  // nldd-list breaks on items added before it and nldd-list-item are defined, so load those first.
+  async function show(site) {
+    const items = site.pages.map(page => row(site, page));
+    const holder = document.createElement("div");
+    holder.append(...items);
+    await discover(holder);
+    await customElements.whenDefined("nldd-list");
+    document.getElementById("paginas").append(...items);
+    document.getElementById("meer").hidden = site.pages.length < 100;
+    document.getElementById("pagina-blok").hidden = false;
+  }
+
   fetch("/_index.json", { cache: "no-store" })
     .then(res => res.ok ? res.json() : Promise.reject())
     .then(({ sites }) => {
       const site = sites.find(s => s.slug === slug);
-      if (!site || !site.pages.length) return;
-      document.getElementById("paginas").append(...site.pages.map(page => row(site, page)));
-      document.getElementById("meer").hidden = site.pages.length < 100;
-      document.getElementById("pagina-blok").hidden = false;
+      if (site && site.pages.length) return show(site);
     })
     .catch(() => {});
 </script>

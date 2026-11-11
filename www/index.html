@@ -27,7 +27,9 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-shell>
-<script>
+<script type="module">
+  import { discover } from "https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/cdn/autoloader.js";
+
   // Names, titles and commit messages come from participants: set them as attributes, never as HTML.
   const search = document.getElementById("zoek");
   const list = document.getElementById("sites");
@@ -68,8 +70,14 @@
       const res = await fetch("/_index.json", { cache: "no-store" });
       if (!res.ok) return;
       const { sites } = await res.json();
+      const items = sites.map(row);
+      // nldd-list breaks on items added before it and nldd-list-item are defined, so load those first.
+      const holder = document.createElement("div");
+      holder.append(...items);
+      await discover(holder);
+      await customElements.whenDefined("nldd-list");
       list.querySelectorAll("nldd-list-item").forEach(item => item.remove());
-      list.append(...sites.map(row));
+      list.append(...items);
       applyFilter();
     } catch (e) {
       // Keep the current list; the next refresh tries again.
