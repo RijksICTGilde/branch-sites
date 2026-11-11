@@ -1,10 +1,11 @@
+import base64
 import json
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from branch_sites import Syncer, public_url, slugify
+from branch_sites import Syncer, auth_env, public_url, slugify
 
 
 def run(cwd: Path, *args: str) -> None:
@@ -157,3 +158,28 @@ def test_symlink_outside_site_is_dropped(syncer: Syncer, origin: Origin) -> None
     assert (syncer.sites_dir / "zon" / "index.html").read_text() == "x"
     assert not (syncer.sites_dir / "zon" / "passwd").exists()
     assert not (syncer.sites_dir / "zon" / "passwd").is_symlink()
+
+
+def test_auth_env_sends_token_as_basic_header() -> None:
+    env = auth_env("secret-token")
+
+    assert env["GIT_CONFIG_KEY_0"] == "http.extraHeader"
+    scheme, encoded = env["GIT_CONFIG_VALUE_0"].removeprefix("Authorization: ").split(" ")
+    assert scheme == "Basic"
+    assert base64.b64decode(encoded).decode() == "x-access-token:secret-token"
+    assert auth_env(None) == {} and auth_env("") == {}
+
+
+def test_token_is_not_stored_or_published(tmp_path: Path, origin: Origin) -> None:
+    syncer = Syncer(origin.url, tmp_path / "sites", tmp_path / "work", token="secret-token")
+    syncer.reset()
+    origin.commit("zon", {"index.html": "x"})
+
+    syncer.sync()
+
+    assert (syncer.sites_dir / "zon" / "index.html").read_text() == "x"
+    encoded = base64.b64encode(b"x-access-token:secret-token").decode()
+    for path in [*syncer.repo.rglob("*"), syncer.sites_dir / "_index.json"]:
+        if path.is_file():
+            content = path.read_bytes()
+            assert b"secret-token" not in content and encoded.encode() not in content, path

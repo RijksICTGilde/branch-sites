@@ -29,14 +29,17 @@ De branchnaam wordt een slug: kleine letters, alles behalve `a-z` en `0-9` wordt
 - Het uitpakken gebruikt het `data`-filter van `tarfile`. Een symlink in een branch die buiten de site wijst (bijvoorbeeld naar `/etc/passwd`) wordt overgeslagen.
 - Op de indexpagina komen namen, titels en commit messages alleen in attributen en `textContent`, nooit als HTML.
 - Alles krijgt `Cache-Control: no-store`, zonder ETag. Sites veranderen tijdens de demo voortdurend.
-- De repository-URL komt zonder credentials in `_index.json`.
+- De repository-URL komt zonder credentials in `_index.json`, en de token komt nergens op schijf.
 
 ## Configuratie
 
 | Env var | Verplicht | Standaard | Betekenis |
 |---|---|---|---|
-| `REPO_URL` | ja | | De repository, bijvoorbeeld `https://github.com/org/demo-sites.git` |
+| `REPO_URL` | ja | | De repository over HTTPS, bijvoorbeeld `https://github.com/RijksICTGilde/vibe-coded-pages.git`. Zonder token erin |
+| `GIT_TOKEN` | nee | | Alleen voor een private repository: een fine-grained PAT die alleen bij deze repository mag, met `Contents: Read-only` |
 | `POLL_INTERVAL_MINUTES` | nee | `5` | Hoe vaak de syncer GitHub bevraagt. Een breuk mag, bijvoorbeeld `0.5` |
+
+Git krijgt `GIT_TOKEN` mee als `Authorization`-header via `GIT_CONFIG_*`-omgevingsvariabelen. De token staat dus niet in de command line, niet in `.git/config` en niet in de logs. SSH wordt niet ondersteund: GitHub accepteert daar geen PAT, en `ssh` weigert te starten onder de willekeurige UID die OpenShift toewijst.
 
 De container luistert op poort 8080. `/healthz` geeft 503 tot de eerste sync klaar is en daarna 200, zodat een pod die net gestart of gewekt is pas verkeer krijgt als de sites er staan.
 

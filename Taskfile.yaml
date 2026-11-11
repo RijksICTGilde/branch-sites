@@ -17,9 +17,9 @@ tasks:
       - docker build -t {{.IMAGE}} .
 
   run:
-    desc: Run the image locally on http://localhost:8080 (REPO_URL=... task run)
+    desc: Run the image locally on http://localhost:8080 (REPO_URL=... [GIT_TOKEN=...] task run)
     deps: [build]
     requires:
       vars: [REPO_URL]
     cmds:
-      - docker run --rm --user 1000770000:0 -p 8080:8080 -e REPO_URL={{.REPO_URL}} -e POLL_INTERVAL_MINUTES={{.POLL_INTERVAL_MINUTES | default "1"}} {{.IMAGE}}
+      - docker run --rm --user 1000770000:0 -p 8080:8080 -e REPO_URL={{.REPO_URL}} -e GIT_TOKEN -e POLL_INTERVAL_MINUTES={{.POLL_INTERVAL_MINUTES | default "1"}} {{.IMAGE}}

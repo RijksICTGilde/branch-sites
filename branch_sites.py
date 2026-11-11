@@ -1,5 +1,6 @@
 """Polls a Git repository and publishes every branch as a static site, served by nginx."""
 
+import base64
 import html
 import json
 import logging
@@ -47,8 +48,23 @@ def slugify(name: str) -> str:
     return slug[:SLUG_MAX].rstrip("-")
 
 
-def git(repo: Path, *args: str) -> bytes:
-    result = subprocess.run(["git", "-C", str(repo), *args], capture_output=True)
+def auth_env(token: str | None) -> dict[str, str]:
+    """Git config that sends the token as a header: never on the command line, never in .git/config."""
+    if not token:
+        return {}
+    basic = base64.b64encode(f"x-access-token:{token}".encode()).decode()
+    return {
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "http.extraHeader",
+        "GIT_CONFIG_VALUE_0": f"Authorization: Basic {basic}",
+    }
+
+
+def git(repo: Path, *args: str, env: dict[str, str] | None = None) -> bytes:
+    # GIT_TOKEN is the only credential: no prompt to hang on, no helper (like a keychain) to fall back to.
+    full_env = os.environ | {"GIT_TERMINAL_PROMPT": "0"} | (env or {})
+    cmd = ["git", "-c", "credential.helper=", "-C", str(repo), *args]
+    result = subprocess.run(cmd, capture_output=True, env=full_env)
     if result.returncode != 0:
         # The command line is left out on purpose: it can hold the repository URL.
         raise GitError(f"git {args[0]} failed with exit {result.returncode}")
@@ -82,8 +98,9 @@ def _read_title(index_file: Path) -> str:
 
 
 class Syncer:
-    def __init__(self, repo_url: str, sites_dir: Path, work_dir: Path) -> None:
+    def __init__(self, repo_url: str, sites_dir: Path, work_dir: Path, token: str | None = None) -> None:
         self.repo_url = repo_url
+        self.auth_env = auth_env(token)
         self.sites_dir = sites_dir
         self.data_dir = sites_dir / ".data"
         self.repo = work_dir / "repo.git"
@@ -99,7 +116,11 @@ class Syncer:
             self.repo.mkdir(parents=True)
             git(self.repo, "init", "--bare", "--quiet")
             git(self.repo, "remote", "add", "origin", self.repo_url)
-        git(self.repo, "fetch", "--quiet", "--prune", "--depth=1", "origin", "+refs/heads/*:refs/heads/*")
+        git(
+            self.repo,
+            *("fetch", "--quiet", "--prune", "--depth=1", "origin", "+refs/heads/*:refs/heads/*"),
+            env=self.auth_env,
+        )
 
     def branches(self) -> dict[str, Branch]:
         """Branches by slug. When two names map to the same slug, the alphabetically first wins."""
@@ -189,7 +210,7 @@ def main() -> int:
     repo_url = os.environ["REPO_URL"]
     interval = float(os.environ.get("POLL_INTERVAL_MINUTES", "5")) * 60
 
-    syncer = Syncer(repo_url, SITES_DIR, WORK_DIR)
+    syncer = Syncer(repo_url, SITES_DIR, WORK_DIR, token=os.environ.get("GIT_TOKEN"))
     syncer.reset()
     nginx = subprocess.Popen(NGINX_CMD)
 
