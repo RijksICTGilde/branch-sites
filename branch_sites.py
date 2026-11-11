@@ -21,6 +21,8 @@ SITES_DIR = Path("/tmp/sites")
 WORK_DIR = Path("/tmp/work")
 NGINX_CMD = ["nginx", "-e", "stderr", "-c", "/app/nginx.conf"]
 
+# A hanging fetch (network, proxy) would otherwise stall the loop forever while the old sites keep being served.
+GIT_TIMEOUT = 300
 SLUG_MAX = 63
 TITLE_SCAN_BYTES = 64 * 1024
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
@@ -60,15 +62,31 @@ def auth_env(token: str | None) -> dict[str, str]:
     }
 
 
+def _kill_group(proc: subprocess.Popen) -> None:
+    """Kill git and its helpers (git-remote-https), which run in the process group started for it."""
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
 def git(repo: Path, *args: str, env: dict[str, str] | None = None) -> bytes:
     # GIT_TOKEN is the only credential: no prompt to hang on, no helper (like a keychain) to fall back to.
     full_env = os.environ | {"GIT_TERMINAL_PROMPT": "0"} | (env or {})
     cmd = ["git", "-c", "credential.helper=", "-C", str(repo), *args]
-    result = subprocess.run(cmd, capture_output=True, env=full_env)
-    if result.returncode != 0:
+    with subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=full_env, start_new_session=True
+    ) as proc:
+        try:
+            stdout, _ = proc.communicate(timeout=GIT_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            _kill_group(proc)
+            proc.communicate()
+            raise GitError(f"git {args[0]} timed out after {GIT_TIMEOUT}s") from None
+    if proc.returncode != 0:
         # The command line is left out on purpose: it can hold the repository URL.
-        raise GitError(f"git {args[0]} failed with exit {result.returncode}")
-    return result.stdout
+        raise GitError(f"git {args[0]} failed with exit {proc.returncode}")
+    return stdout
 
 
 def public_url(url: str) -> str:
@@ -105,6 +123,9 @@ class Syncer:
         self.data_dir = sites_dir / ".data"
         self.repo = work_dir / "repo.git"
         self.published: dict[str, str] = {}
+        # Versions replaced in the previous round. Deleted one round later, so a request that resolved the old
+        # symlink just before the swap can still read its files.
+        self.retired: list[Path] = []
 
     def reset(self) -> None:
         """Start from an empty sites dir, so leftovers from a previous container are not served."""
@@ -139,12 +160,20 @@ class Syncer:
 
     def sync(self) -> bool:
         """One poll round. Returns whether anything changed."""
+        for old in self.retired:
+            shutil.rmtree(old, ignore_errors=True)
+        self.retired = []
         self.fetch()
         branches = self.branches()
         changed = False
         for slug, branch in branches.items():
             if self.published.get(slug) != branch.sha:
-                self.publish(slug, branch.sha)
+                # One branch that fails to extract must not hold up the others. It is retried next round.
+                try:
+                    self.publish(slug, branch.sha)
+                except (GitError, tarfile.TarError, OSError) as exc:
+                    log.error("publishing /%s/ at %s failed: %s", slug, branch.sha[:8], exc)
+                    continue
                 changed = True
         for slug in set(self.published) - set(branches):
             self.unpublish(slug)
@@ -160,13 +189,24 @@ class Syncer:
         shutil.rmtree(tmp, ignore_errors=True)
         shutil.rmtree(target, ignore_errors=True)
         tmp.mkdir()
-        proc = subprocess.Popen(["git", "-C", str(self.repo), "archive", "--format=tar", sha], stdout=subprocess.PIPE)
+        cmd = ["git", "-C", str(self.repo), "archive", "--format=tar", sha]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, start_new_session=True)
         assert proc.stdout is not None
-        with tarfile.open(fileobj=proc.stdout, mode="r|") as tar:
-            tar.extractall(tmp, filter=_drop_unsafe_member)
-        if proc.wait() != 0:
+        # Killing git ends the stream, so a hanging archive surfaces as a truncated tar instead of a stuck loop.
+        timer = threading.Timer(GIT_TIMEOUT, _kill_group, [proc])
+        timer.start()
+        try:
+            with proc.stdout, tarfile.open(fileobj=proc.stdout, mode="r|") as tar:
+                tar.extractall(tmp, filter=_drop_unsafe_member)
+            if proc.wait() != 0:
+                raise GitError(f"git archive failed with exit {proc.returncode}")
+        except BaseException:
+            _kill_group(proc)
+            proc.wait()
             shutil.rmtree(tmp, ignore_errors=True)
-            raise GitError(f"git archive failed with exit {proc.returncode}")
+            raise
+        finally:
+            timer.cancel()
         tmp.rename(target)
 
         # Swap the symlink in one rename, so nginx never sees a half-extracted site.
@@ -178,13 +218,13 @@ class Syncer:
 
         old_sha = self.published.get(slug)
         if old_sha:
-            shutil.rmtree(self.data_dir / f"{slug}-{old_sha}", ignore_errors=True)
+            self.retired.append(self.data_dir / f"{slug}-{old_sha}")
         self.published[slug] = sha
         log.info("published /%s/ at %s", slug, sha[:8])
 
     def unpublish(self, slug: str) -> None:
         (self.sites_dir / slug).unlink(missing_ok=True)
-        shutil.rmtree(self.data_dir / f"{slug}-{self.published.pop(slug)}", ignore_errors=True)
+        self.retired.append(self.data_dir / f"{slug}-{self.published.pop(slug)}")
         log.info("removed /%s/", slug)
 
     def write_index(self, branches: dict[str, Branch]) -> None:

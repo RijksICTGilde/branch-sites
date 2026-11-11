@@ -1,11 +1,13 @@
 import base64
 import json
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
-from branch_sites import Syncer, auth_env, public_url, slugify
+import branch_sites
+from branch_sites import GitError, Syncer, auth_env, public_url, slugify
 
 
 def run(cwd: Path, *args: str) -> None:
@@ -124,6 +126,11 @@ def test_update_replaces_site_and_removes_old_version(syncer: Syncer, origin: Or
 
     assert (syncer.sites_dir / "zon" / "index.html").read_text() == "v2"
     assert not (syncer.sites_dir / "zon" / "old.html").exists()
+    # A request that resolved the old symlink just before the swap can still read the old files.
+    assert (syncer.data_dir / f"zon-{first_sha}" / "old.html").read_text() == "old"
+
+    syncer.sync()
+
     assert not (syncer.data_dir / f"zon-{first_sha}").exists()
 
 
@@ -135,8 +142,11 @@ def test_deleted_branch_is_removed(syncer: Syncer, origin: Origin) -> None:
     assert syncer.sync() is True
 
     assert not (syncer.sites_dir / "zon").exists()
-    assert list(syncer.data_dir.glob("zon-*")) == []
     assert [s["slug"] for s in index(syncer)["sites"]] == ["main"]
+
+    syncer.sync()
+
+    assert list(syncer.data_dir.glob("zon-*")) == []
 
 
 def test_colliding_slugs_publish_first_branch_only(syncer: Syncer, origin: Origin) -> None:
@@ -183,3 +193,48 @@ def test_token_is_not_stored_or_published(tmp_path: Path, origin: Origin) -> Non
         if path.is_file():
             content = path.read_bytes()
             assert b"secret-token" not in content and encoded.encode() not in content, path
+
+
+def test_failing_branch_does_not_block_others(syncer: Syncer, origin: Origin, monkeypatch: pytest.MonkeyPatch) -> None:
+    origin.commit("a-kapot", {"index.html": "kapot"})
+    origin.commit("zon", {"index.html": "zon"})
+    publish = Syncer.publish
+
+    def failing_publish(self: Syncer, slug: str, sha: str) -> None:
+        if slug == "a-kapot":
+            raise GitError("git archive failed with exit 128")
+        publish(self, slug, sha)
+
+    monkeypatch.setattr(Syncer, "publish", failing_publish)
+    syncer.sync()
+
+    assert (syncer.sites_dir / "zon" / "index.html").read_text() == "zon"
+    assert not (syncer.sites_dir / "a-kapot").exists()
+    assert "a-kapot" not in [s["slug"] for s in index(syncer)["sites"]]
+
+    monkeypatch.setattr(Syncer, "publish", publish)
+    assert syncer.sync() is True
+
+    assert (syncer.sites_dir / "a-kapot" / "index.html").read_text() == "kapot"
+
+
+def test_hanging_git_times_out(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_git = bin_dir / "git"
+    # The child sleep stands in for git-remote-https: it must be killed along with git.
+    fake_git.write_text('#!/bin/sh\nsleep 30 &\necho $! > "$PIDFILE"\nwait\n')
+    fake_git.chmod(0o755)
+    pidfile = tmp_path / "helper.pid"
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}:{Path('/bin')}")
+    monkeypatch.setenv("PIDFILE", str(pidfile))
+    monkeypatch.setattr(branch_sites, "GIT_TIMEOUT", 1)
+
+    start = time.monotonic()
+    with pytest.raises(GitError, match="timed out"):
+        branch_sites.git(tmp_path, "fetch")
+
+    assert time.monotonic() - start < 10
+    helper = int(pidfile.read_text())
+    state = subprocess.run(["ps", "-o", "stat=", "-p", str(helper)], capture_output=True, text=True).stdout.strip()
+    assert state in ("", "Z"), f"helper still running: {state}"
