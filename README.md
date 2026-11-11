@@ -28,6 +28,8 @@ De branchnaam wordt een slug: kleine letters, alles behalve `a-z` en `0-9` wordt
 - Wat deelnemers committen wordt alleen uitgepakt en geserveerd, nooit uitgevoerd. Er is geen build.
 - Het uitpakken gebruikt het `data`-filter van `tarfile`. Een symlink in een branch die buiten de site wijst (bijvoorbeeld naar `/etc/passwd`) wordt overgeslagen.
 - Op de indexpagina komen namen, titels en commit messages alleen in attributen en `textContent`, nooit als HTML.
+- Alleen bestandstypen die een website nodig heeft worden geserveerd: HTML, CSS, JS, JSON, tekst, afbeeldingen, fonts, audio, video, PDF en CSV. Al het andere (zip, exe, dmg, ...) krijgt een 403 met een pagina die uitlegt waarom. Alles krijgt `X-Content-Type-Options: nosniff`, zodat een browser een bestand nooit als iets anders uitvoert dan de extensie zegt.
+- Alle sites delen één origin. JavaScript van de ene site kan dus bij een andere. Een `Content-Security-Policy: sandbox` zou dat afschermen, maar dan stuurt de browser het login-cookie van de authorization wall niet mee voor CSS, afbeeldingen en `fetch`.
 - Alles krijgt `Cache-Control: no-store`, zonder ETag. Sites veranderen tijdens de demo voortdurend.
 - De repository-URL komt zonder credentials in `_index.json`, en de token komt nergens op schijf.
 
