@@ -17,6 +17,8 @@ De container haalt de wijzigingen zelf op, er hoeft niets naar binnen te pushen.
 3. Een verwijderde branch verdwijnt van de pagina.
 4. `/tmp/sites/_index.json` beschrijft alle sites (naam, titel uit `<title>`, datum van de laatste commit, commit message). De indexpagina leest die en filtert in de browser.
 
+Foutpagina's zijn eigen NLDD-pagina's in `www/_fout/`, niet die van nginx: 404, 500, een geblokkeerd bestandstype, en een map zonder `index.html`. Die laatste toont de HTML-pagina's die wel in de branch staan. Die lijst zet de syncer per site in `_index.json` (`pages`, maximaal 100).
+
 Bij het starten begint de syncer met een lege `/tmp/sites` en pakt hij alles opnieuw uit. Er is dus geen persistente opslag nodig: een `emptyDir` volstaat.
 
 ### Branchnaam naar pad

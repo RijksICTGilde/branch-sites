@@ -25,6 +25,8 @@ NGINX_CMD = ["nginx", "-e", "stderr", "-c", "/app/nginx.conf"]
 GIT_TIMEOUT = 300
 SLUG_MAX = 63
 TITLE_SCAN_BYTES = 64 * 1024
+# The page shown for a site without index.html lists its HTML pages. Enough to find your way, not a file browser.
+PAGES_MAX = 100
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 REF_FORMAT = "%(refname:lstrip=2)%00%(objectname)%00%(committerdate:iso-strict)%00%(subject)"
 
@@ -112,6 +114,16 @@ def _read_title(index_file: Path) -> str:
     if not match:
         return ""
     return " ".join(html.unescape(match.group(1)).split())[:200]
+
+
+def _html_pages(site_dir: Path) -> list[str]:
+    """HTML pages of a site as paths relative to it, for linking to when the site has no index.html."""
+    pages = sorted(
+        path.relative_to(site_dir).as_posix()
+        for path in site_dir.rglob("*")
+        if path.suffix.lower() in (".html", ".htm") and path.is_file() and not path.is_symlink()
+    )
+    return pages[:PAGES_MAX]
 
 
 class Syncer:
@@ -229,7 +241,13 @@ class Syncer:
     def write_index(self, branches: dict[str, Branch]) -> None:
         sites = [
             asdict(branch)
-            | {"slug": slug, "path": f"/{slug}/", "title": _read_title(self.sites_dir / slug / "index.html")}
+            | {
+                "slug": slug,
+                "path": f"/{slug}/",
+                "title": _read_title(self.sites_dir / slug / "index.html"),
+                "has_index": (self.sites_dir / slug / "index.html").is_file(),
+                "pages": _html_pages(self.data_dir / f"{slug}-{self.published[slug]}"),
+            }
             for slug, branch in branches.items()
             if slug in self.published
         ]

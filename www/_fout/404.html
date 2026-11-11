@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagina niet gevonden</title>
+<link rel="icon" type="image/svg+xml" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/favicon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/css/global.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/cdn/autoloader.js"></script>
+</head>
+<body>
+<nldd-shell>
+  <nldd-page>
+    <nldd-simple-section>
+      <nldd-link href="/" start-icon="chevron-left" text="Alle websites"></nldd-link>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="1" heading-level="1" text="Deze pagina bestaat niet"></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text>
+        <p>Er staat niets op <code id="pad"></code>.</p>
+        <ul>
+          <li>Klopt de naam? Hoofdletters tellen mee: <code>Foto.png</code> is iets anders dan <code>foto.png</code>.</li>
+          <li>Net gepusht? Het duurt een paar minuten voordat een wijziging online staat.</li>
+          <li>Staat het bestand in git? Alleen wat je commit en pusht komt online.</li>
+        </ul>
+      </nldd-rich-text>
+      <div id="site-blok" hidden>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-link id="site-link" start-icon="chevron-right"></nldd-link>
+      </div>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-shell>
+<script>
+  // The browser keeps the requested URL. Inside a site, offer the way back to its start page.
+  const path = location.pathname;
+  document.getElementById("pad").textContent = decodeURIComponent(path);
+  const slug = path.split("/")[1];
+
+  fetch("/_index.json", { cache: "no-store" })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(({ sites }) => {
+      const site = sites.find(s => s.slug === slug);
+      if (!site || path === site.path) return;
+      const link = document.getElementById("site-link");
+      link.setAttribute("href", site.path);
+      link.setAttribute("text", `Naar de startpagina van ${site.title || site.name}`);
+      document.getElementById("site-blok").hidden = false;
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>

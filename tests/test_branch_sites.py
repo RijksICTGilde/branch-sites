@@ -238,3 +238,19 @@ def test_hanging_git_times_out(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     helper = int(pidfile.read_text())
     state = subprocess.run(["ps", "-o", "stat=", "-p", str(helper)], capture_output=True, text=True).stdout.strip()
     assert state in ("", "Z"), f"helper still running: {state}"
+
+
+def test_index_lists_pages_of_site_without_index_html(syncer: Syncer, origin: Origin) -> None:
+    origin.commit("geen-index", {"over.html": "<p>over</p>", "docs/Hulp.HTM": "x", "style.css": "b{}"}, base="main")
+    run(origin.path, "git", "switch", "--quiet", "geen-index")
+    run(origin.path, "git", "rm", "--quiet", "index.html")
+    run(origin.path, "git", "commit", "--quiet", "-m", "remove index")
+    run(origin.path, "git", "switch", "--quiet", "main")
+
+    syncer.sync()
+
+    sites = {s["slug"]: s for s in index(syncer)["sites"]}
+    assert sites["geen-index"]["has_index"] is False
+    assert sites["geen-index"]["pages"] == ["docs/Hulp.HTM", "over.html"]
+    assert sites["main"]["has_index"] is True
+    assert sites["main"]["pages"] == ["index.html"]

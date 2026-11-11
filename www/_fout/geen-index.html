@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oeps, index.html mist</title>
+<link rel="icon" type="image/svg+xml" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/favicon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/css/global.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@nldd/design-system@0.21.1/dist/cdn/autoloader.js"></script>
+</head>
+<body>
+<nldd-shell>
+  <nldd-page>
+    <nldd-simple-section>
+      <nldd-link href="/" start-icon="chevron-left" text="Alle websites"></nldd-link>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="1" heading-level="1" text="Oeps, index.html mist"></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text>
+        <p>De map <code id="map"></code> bestaat, maar er staat geen <code>index.html</code> in. Dat is de pagina die een browser opent als je naar een map gaat.</p>
+        <p>Maak een bestand <code>index.html</code> in deze map, of hernoem je startpagina. Commit en push, dan staat hij er binnen een paar minuten.</p>
+      </nldd-rich-text>
+      <div id="pagina-blok" hidden>
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="3" heading-level="2" text="Deze pagina's staan wel in de branch"></nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list id="paginas" accessible-label="Pagina's in deze branch"></nldd-list>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-text id="meer" size="sm" color="secondary" hidden>Alleen de eerste 100 pagina's staan hier.</nldd-text>
+      </div>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-shell>
+<script>
+  // Page names come from participants: set them as attributes, never as HTML.
+  const path = location.pathname;
+  document.getElementById("map").textContent = decodeURIComponent(path);
+  const slug = path.split("/")[1];
+
+  function row(site, page) {
+    const item = document.createElement("nldd-list-item");
+    item.setAttribute("href", site.path + page.split("/").map(encodeURIComponent).join("/"));
+    const text = document.createElement("nldd-text-cell");
+    text.setAttribute("text", page);
+    const chevron = document.createElement("nldd-icon-cell");
+    chevron.setAttribute("size", "20");
+    chevron.setAttribute("color", "secondary");
+    chevron.setAttribute("icon", "chevron-right");
+    item.append(text, chevron);
+    return item;
+  }
+
+  fetch("/_index.json", { cache: "no-store" })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(({ sites }) => {
+      const site = sites.find(s => s.slug === slug);
+      if (!site || !site.pages.length) return;
+      document.getElementById("paginas").append(...site.pages.map(page => row(site, page)));
+      document.getElementById("meer").hidden = site.pages.length < 100;
+      document.getElementById("pagina-blok").hidden = false;
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>
