@@ -126,6 +126,13 @@ def _html_pages(site_dir: Path) -> list[str]:
     return pages[:PAGES_MAX]
 
 
+def write_explanation(sites_dir: Path, push_token: str | None) -> None:
+    """Settings for the explanation page. The push token is meant to be shown: it is what participants push with."""
+    tmp = sites_dir / ".uitleg.json.tmp"
+    tmp.write_text(json.dumps({"push_token": push_token or None}))
+    os.replace(tmp, sites_dir / "_uitleg.json")
+
+
 class Syncer:
     def __init__(self, repo_url: str, sites_dir: Path, work_dir: Path, token: str | None = None) -> None:
         self.repo_url = repo_url
@@ -269,6 +276,7 @@ def main() -> int:
 
     syncer = Syncer(repo_url, SITES_DIR, WORK_DIR, token=os.environ.get("GIT_TOKEN"))
     syncer.reset()
+    write_explanation(SITES_DIR, os.environ.get("PUSH_TOKEN"))
     nginx = subprocess.Popen(NGINX_CMD)
 
     stop = threading.Event()

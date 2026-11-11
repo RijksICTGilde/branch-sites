@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import branch_sites
-from branch_sites import GitError, Syncer, auth_env, public_url, slugify
+from branch_sites import GitError, Syncer, auth_env, public_url, slugify, write_explanation
 
 
 def run(cwd: Path, *args: str) -> None:
@@ -254,3 +254,10 @@ def test_index_lists_pages_of_site_without_index_html(syncer: Syncer, origin: Or
     assert sites["geen-index"]["pages"] == ["docs/Hulp.HTM", "over.html"]
     assert sites["main"]["has_index"] is True
     assert sites["main"]["pages"] == ["index.html"]
+
+
+@pytest.mark.parametrize(("token", "shown"), [("github_pat_abc", "github_pat_abc"), ("", None), (None, None)])
+def test_explanation_shows_push_token_only_when_set(tmp_path: Path, token: str | None, shown: str | None) -> None:
+    write_explanation(tmp_path, token)
+
+    assert json.loads((tmp_path / "_uitleg.json").read_text()) == {"push_token": shown}

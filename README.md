@@ -41,6 +41,7 @@ De branchnaam wordt een slug: kleine letters, alles behalve `a-z` en `0-9` wordt
 |---|---|---|---|
 | `REPO_URL` | ja | | De repository over HTTPS, bijvoorbeeld `https://github.com/RijksICTGilde/vibe-coded-pages.git`. Zonder token erin |
 | `GIT_TOKEN` | nee | | Alleen voor een private repository: een fine-grained PAT die alleen bij deze repository mag, met `Contents: Read-only` |
+| `PUSH_TOKEN` | nee | | De gedeelde PAT waarmee deelnemers pushen. Staat hij erin, dan vult de uitlegpagina hem in de voorbeelden in. Iedereen die langs de authorization wall komt kan hem dus zien: gebruik een fine-grained PAT voor alleen deze repository, met `Contents: Read and write` en een korte looptijd |
 | `POLL_INTERVAL_MINUTES` | nee | `5` | Hoe vaak de syncer GitHub bevraagt. Een breuk mag, bijvoorbeeld `0.5` |
 
 Git krijgt `GIT_TOKEN` mee als `Authorization`-header via `GIT_CONFIG_*`-omgevingsvariabelen. De token staat dus niet in de command line, niet in `.git/config` en niet in de logs. SSH wordt niet ondersteund: GitHub accepteert daar geen PAT, en `ssh` weigert te starten onder de willekeurige UID die OpenShift toewijst.

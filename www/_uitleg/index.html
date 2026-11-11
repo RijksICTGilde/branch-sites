@@ -22,14 +22,20 @@
         <h2>Wat heb je nodig</h2>
         <ul>
           <li><strong>git</strong>, en liefst ook de <a href="https://cli.github.com/">GitHub CLI</a> (<code>gh</code>).</li>
-          <li>Een <strong>token</strong> waarmee je naar de repository mag pushen. Die krijg je van de organisatie. Zet hem in de env var <code>GH_TOKEN</code>, niet in een bestand in de repository.</li>
+          <li>Een <strong>token</strong> waarmee je naar de repository mag pushen. <span data-token-onbekend>Die krijg je van de organisatie.</span><span data-token-bekend hidden>Die staat hieronder, en is in de voorbeelden al ingevuld.</span> Zet hem in de env var <code>GH_TOKEN</code>, niet in een bestand in de repository.</li>
         </ul>
-
+      </nldd-rich-text>
+      <div data-token-bekend hidden>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-code-viewer id="token"></nldd-code-viewer>
+      </div>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
         <h2>1. Token instellen en inloggen</h2>
       </nldd-rich-text>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-code-viewer data-template># De token die je van de organisatie kreeg
-export GH_TOKEN="github_pat_..."
+      <nldd-code-viewer data-template># De token voor deze demo
+export GH_TOKEN="{{token}}"
 
 # gh gebruikt GH_TOKEN vanzelf; controleer dat het werkt
 gh auth status
@@ -74,7 +80,7 @@ git push</nldd-code-viewer>
         <p>Heb je geen <code>gh</code>, haal de repository dan op met de token in de URL. Let op: de token komt dan in <code>.git/config</code> te staan. Deel die map dus niet.</p>
       </nldd-rich-text>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-code-viewer data-template>export GH_TOKEN="github_pat_..."
+      <nldd-code-viewer data-template>export GH_TOKEN="{{token}}"
 git clone "https://x-access-token:${GH_TOKEN}@github.com/{{repo}}.git"
 cd {{name}}</nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
@@ -94,20 +100,29 @@ cd {{name}}</nldd-code-viewer>
   // Fills the repository into the examples. The URL comes from the syncer, without credentials.
   document.querySelectorAll("[data-origin]").forEach(el => { el.textContent = location.origin; });
 
-  fetch("/_index.json", { cache: "no-store" })
-    .then(res => res.ok ? res.json() : Promise.reject())
-    .then(({ repo }) => {
-      const match = /github\.com[/:]([^/]+\/[^/]+?)(\.git)?\/?$/.exec(repo || "");
-      if (!match) return;
-      const full = match[1];
-      const name = full.split("/")[1];
-      document.querySelectorAll("[data-template]").forEach(el => {
-        el.textContent = el.textContent.replaceAll("{{repo}}", full).replaceAll("{{name}}", name);
-      });
+  // The push token is optional (PUSH_TOKEN). Without it the examples keep a placeholder.
+  const getJson = url => fetch(url, { cache: "no-store" }).then(res => res.ok ? res.json() : {}).catch(() => ({}));
+
+  Promise.all([getJson("/_index.json"), getJson("/_uitleg.json")]).then(([{ repo }, { push_token: token }]) => {
+    const match = /github\.com[/:]([^/]+\/[^/]+?)(\.git)?\/?$/.exec(repo || "");
+    const full = match ? match[1] : "{{repo}}";
+    const name = match ? full.split("/")[1] : "{{name}}";
+    document.querySelectorAll("[data-template]").forEach(el => {
+      el.textContent = el.textContent
+        .replaceAll("{{repo}}", full)
+        .replaceAll("{{name}}", name)
+        .replaceAll("{{token}}", token || "github_pat_...");
+    });
+    if (match) {
       document.querySelectorAll("[data-repo-name]").forEach(el => { el.textContent = full; });
       document.querySelectorAll("[data-repo-link]").forEach(el => { el.href = `https://github.com/${full}`; });
-    })
-    .catch(() => {});
+    }
+    if (token) {
+      document.getElementById("token").textContent = token;
+      document.querySelectorAll("[data-token-bekend]").forEach(el => { el.hidden = false; });
+      document.querySelectorAll("[data-token-onbekend]").forEach(el => { el.hidden = true; });
+    }
+  });
 </script>
 </body>
 </html>
