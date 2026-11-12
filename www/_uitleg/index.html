@@ -20,11 +20,23 @@
         <p>Elke branch in de repository <a data-repo-link href="#"><span data-repo-name>van de demo</span></a> is een eigen website. Je maakt een branch met de naam van je team, zet er HTML, CSS en afbeeldingen in en pusht. Binnen een paar minuten staat je website op <code><span data-origin></span>/<em>jouw-team</em>/</code>.</p>
 
         <h2>Werk je met een AI-agent?</h2>
-        <p>Plak de prompt hieronder in je agent, bijvoorbeeld Claude Code, GitHub Copilot of Cursor. De agent richt alles in wat verderop op deze pagina staat, zet je website online en vraagt je daarna wat je wilt maken.</p>
+        <p>Met een agent, bijvoorbeeld Claude Code, GitHub Copilot of Cursor, kan het in twee stappen. De agent richt alles in wat verderop op deze pagina staat, zet je website online en vraagt je daarna wat je wilt maken.</p>
       </nldd-rich-text>
       <nldd-spacer size="16"></nldd-spacer>
-      <nldd-banner variant="warning" text="Wat je aan je agent geeft, geef je weg" supporting-text="Een token, wachtwoord of API-key die je aan een agent geeft, gaat mee naar de aanbieder van het model en kan in logs terechtkomen. Voor de token van deze demo is dat niet erg, maar wees je ervan bewust. Geef je agent nooit je eigen tokens of wachtwoorden."></nldd-banner>
-      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-banner variant="warning" text="Wat je in je prompt zet, geef je weg" supporting-text="Alles wat je in het gesprek met een agent zet, gaat mee naar de aanbieder van het model en kan in logs terechtkomen. Plak een token, wachtwoord of API-key dus niet in je prompt. Voor de token van deze demo zou dat niet erg zijn, maar met je eigen tokens wel."></nldd-banner>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h3>1. Zet de token in je terminal</h3>
+        <p>Doe dit in de terminal waarin je daarna je agent start. Werk je in een editor zoals VS Code of Cursor, start die dan vanuit deze terminal, bijvoorbeeld met <code>code .</code>.</p>
+        <p>Zo kan de agent de token gebruiken zonder hem te zien. De agent erft de env var van je terminal, en git en <code>gh</code> lezen hem daar zelf uit. De token staat dan niet in het gesprek en gaat dus ook niet mee naar de aanbieder van het model. Waterdicht is het niet, want een agent kan de env var uitlezen als hij dat wil. Maar je deelt hem niet zomaar, en de prompt vraagt de agent om dat niet te doen.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>export GH_TOKEN="{{token}}"</nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <h3>2. Start je agent en plak deze prompt</h3>
+      </nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
       <nldd-code-viewer id="agent-prompt" language="markdown" wrap max-height="360px"></nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
@@ -88,11 +100,11 @@ git push</nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
         <h2>Zonder de GitHub CLI</h2>
-        <p>Heb je geen <code>gh</code>, haal de repository dan op met de token in de URL. Let op: de token komt dan in <code>.git/config</code> te staan. Deel die map dus niet.</p>
+        <p>Heb je geen <code>gh</code>, dan kan git de token ook zelf uit <code>GH_TOKEN</code> halen. Het commando hieronder zet in de repository een verwijzing naar de env var, niet de token zelf. Er komt dus geen token in <code>.git/config</code> te staan.</p>
       </nldd-rich-text>
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-code-viewer data-template>export GH_TOKEN="{{token}}"
-git clone "https://x-access-token:${GH_TOKEN}@github.com/{{repo}}.git"
+git clone -c credential.helper= -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' https://github.com/{{repo}}.git
 cd {{name}}</nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
@@ -118,14 +130,18 @@ cd {{name}}</nldd-code-viewer>
 ## Wat je nodig hebt
 - git is nodig. Controleer met `git --version` of het er is.
 - De GitHub CLI (`gh`) is handig, maar niet nodig. Gebruik hem als hij er is.
-- Een token om mee te pushen. {{token-regel}}
+- Een token om mee te pushen. Die heb ik al in de env var GH_TOKEN gezet, zodat jij hem kunt gebruiken zonder hem te zien.
+
+## Omgaan met de token
+- Vraag me niet om de token, lees hem niet uit en laat hem nooit zien, ook niet in commando's of uitvoer die je toont.
+- Controleer alleen of hij er is, met `test -n "$GH_TOKEN" && echo gezet`. Is hij niet gezet, vraag me dan om eerst `export GH_TOKEN=...` te doen in de terminal waarin ik jou start, en jou daarna opnieuw te starten.
+- Zet de token nooit in een bestand, ook niet in .git/config of in een remote-URL.
 
 ## Stappen
-1. Zet de token in de env var GH_TOKEN, nooit in een bestand in de repository:
-   export GH_TOKEN="{{token}}"
+1. Controleer dat GH_TOKEN gezet is, zoals hierboven.
 2. Haal de repository op.
-   - Met gh: `gh auth setup-git`, daarna `gh repo clone {{repo}}`.
-   - Zonder gh: `git clone "https://x-access-token:${GH_TOKEN}@github.com/{{repo}}.git"`. De token komt dan in .git/config te staan.
+   - Met gh: `gh auth setup-git`, daarna `gh repo clone {{repo}}`. gh leest GH_TOKEN zelf.
+   - Zonder gh: `git clone -c credential.helper= -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' https://github.com/{{repo}}.git`. Git haalt de token dan bij elke push uit GH_TOKEN, en in .git/config staat alleen die verwijzing.
 3. Vraag me hoe mijn team heet. De branchnaam wordt kleine letters, cijfers en streepjes, bijvoorbeeld team-zonnebloem. Kijk eerst of die branch al op GitHub bestaat, met `git ls-remote --heads origin <branch>`.
    - Bestaat hij al, meld dat dan en vraag of ik bij dat team hoor of een eigen team wil maken. Hoor ik erbij, stap dan over op die branch. Wil ik een eigen team, vraag dan om een andere naam.
    - Bestaat hij nog niet, maak de branch dan en push hem meteen met `git push -u origin <branch>`, voordat je iets bouwt. Zo is de naam geclaimd en kan een ander team hem niet meer nemen.
@@ -157,11 +173,10 @@ Als alles klaar is, vraag me: "Alles is klaar, wat voor web project wil je maken
         .replaceAll("{{name}}", name)
         .replaceAll("{{token}}", token || "github_pat_...");
     });
+    // The token stays out of the prompt: the agent gets it from GH_TOKEN, so it never enters the conversation.
     document.getElementById("agent-prompt").textContent = document.getElementById("agent-prompt-tekst").textContent
       .replaceAll("{{repo}}", full)
-      .replaceAll("{{origin}}", location.origin)
-      .replaceAll("{{token-regel}}", token ? "Die staat hieronder al ingevuld." : "Vraag mij om de token die ik van de organisatie kreeg.")
-      .replaceAll("{{token}}", token || "<token>");
+      .replaceAll("{{origin}}", location.origin);
     if (match) {
       document.querySelectorAll("[data-repo-name]").forEach(el => { el.textContent = full; });
       document.querySelectorAll("[data-repo-link]").forEach(el => { el.href = `https://github.com/${full}`; });
