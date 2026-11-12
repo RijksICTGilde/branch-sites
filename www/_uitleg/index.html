@@ -27,11 +27,21 @@
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
         <h3>1. Zet de token in je terminal</h3>
-        <p>Doe dit in de terminal waarin je daarna je agent start. Werk je in een editor zoals VS Code of Cursor, start die dan vanuit deze terminal.</p>
+        <p>Doe dit in de terminal waarin je daarna je agent start.</p>
         <p>Zo kan de agent de token gebruiken zonder hem te zien. De agent erft de env var van je terminal, en git en <code>gh</code> lezen hem daar zelf uit. De token staat dan niet in het gesprek en gaat dus ook niet mee naar de aanbieder van het model. Waterdicht is het niet, want een agent kan de env var uitlezen als hij dat wil. Maar je deelt hem niet zomaar, en de prompt vraagt de agent om dat niet te doen.</p>
       </nldd-rich-text>
       <nldd-spacer size="8"></nldd-spacer>
+      <nldd-rich-text><p>macOS en Linux:</p></nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
       <nldd-code-viewer data-template>export GH_TOKEN="{{token}}"</nldd-code-viewer>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text><p>Windows (PowerShell):</p></nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>$env:GH_TOKEN = "{{token}}"</nldd-code-viewer>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text><p>Windows (Opdrachtprompt, cmd):</p></nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>set "GH_TOKEN={{token}}"</nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
         <h3>2. Start je agent en plak deze prompt</h3>
@@ -57,8 +67,14 @@
         <h2>1. Token instellen en inloggen</h2>
       </nldd-rich-text>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-code-viewer data-template># De token voor deze demo
+      <nldd-code-viewer data-template># De token voor deze demo (macOS en Linux)
 export GH_TOKEN="{{token}}"
+
+# Op Windows (PowerShell)
+$env:GH_TOKEN = "{{token}}"
+
+# Op Windows (Opdrachtprompt, cmd)
+set "GH_TOKEN={{token}}"
 
 # gh gebruikt GH_TOKEN vanzelf; controleer dat het werkt
 gh auth status
@@ -100,11 +116,15 @@ git push</nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
         <h2>Zonder de GitHub CLI</h2>
-        <p>Heb je geen <code>gh</code>, dan kan git de token ook zelf uit <code>GH_TOKEN</code> halen. Het commando hieronder zet in de repository een verwijzing naar de env var, niet de token zelf. Er komt dus geen token in <code>.git/config</code> te staan.</p>
+        <p>Heb je geen <code>gh</code>, dan kan git de token ook zelf uit <code>GH_TOKEN</code> halen. Zet de token eerst zoals in stap 1. Het commando hieronder zet in de repository een verwijzing naar de env var, niet de token zelf. Er komt dus geen token in <code>.git/config</code> te staan.</p>
       </nldd-rich-text>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-code-viewer data-template>export GH_TOKEN="{{token}}"
-git clone -c credential.helper= -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' https://github.com/{{repo}}.git
+      <nldd-code-viewer data-template>git clone -c credential.helper= -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' https://github.com/{{repo}}.git
+cd {{name}}</nldd-code-viewer>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text><p>Het commando hierboven werkt in bash, zsh en PowerShell. In de Opdrachtprompt (cmd) werken enkele aanhalingstekens niet, gebruik daar dit:</p></nldd-rich-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-code-viewer data-template>git clone -c credential.helper= -c "credential.helper=!f() { echo username=x-access-token; echo password=${GH_TOKEN}; }; f" https://github.com/{{repo}}.git
 cd {{name}}</nldd-code-viewer>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-rich-text>
@@ -134,14 +154,14 @@ cd {{name}}</nldd-code-viewer>
 
 ## Omgaan met de token
 - Vraag me niet om de token, lees hem niet uit en laat hem nooit zien, ook niet in commando's of uitvoer die je toont.
-- Controleer alleen of hij er is, met `test -n "$GH_TOKEN" && echo gezet`. Is hij niet gezet, vraag me dan om eerst `export GH_TOKEN=...` te doen in de terminal waarin ik jou start, en jou daarna opnieuw te starten.
+- Controleer alleen of hij er is, zonder de waarde te tonen: `test -n "$GH_TOKEN" && echo gezet` in bash of zsh, `if ($env:GH_TOKEN) { "gezet" }` in PowerShell, `if defined GH_TOKEN echo gezet` in cmd. Is hij niet gezet, vraag me dan om hem eerst te zetten in de terminal waarin ik jou start (`export GH_TOKEN=...` op macOS en Linux, `$env:GH_TOKEN = "..."` in PowerShell, `set "GH_TOKEN=..."` in cmd), en jou daarna opnieuw te starten.
 - Zet de token nooit in een bestand, ook niet in .git/config of in een remote-URL.
 
 ## Stappen
 1. Controleer dat GH_TOKEN gezet is, zoals hierboven.
 2. Haal de repository op.
    - Met gh: `gh auth setup-git`, daarna `gh repo clone {{repo}}`. gh leest GH_TOKEN zelf.
-   - Zonder gh: `git clone -c credential.helper= -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' https://github.com/{{repo}}.git`. Git haalt de token dan bij elke push uit GH_TOKEN, en in .git/config staat alleen die verwijzing.
+   - Zonder gh: `git clone -c credential.helper= -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' https://github.com/{{repo}}.git`. In cmd werken enkele aanhalingstekens niet: zet de helper daar tussen dubbele aanhalingstekens en laat die rond `password=${GH_TOKEN}` weg. Git haalt de token dan bij elke push uit GH_TOKEN, en in .git/config staat alleen die verwijzing.
 3. Vraag me hoe mijn team heet. De branchnaam wordt kleine letters, cijfers en streepjes, bijvoorbeeld team-zonnebloem. Kijk eerst of die branch al op GitHub bestaat, met `git ls-remote --heads origin <branch>`.
    - Bestaat hij al, meld dat dan en vraag of ik bij dat team hoor of een eigen team wil maken. Hoor ik erbij, stap dan over op die branch. Wil ik een eigen team, vraag dan om een andere naam.
    - Bestaat hij nog niet, maak de branch dan en push hem meteen met `git push -u origin <branch>`, voordat je iets bouwt. Zo is de naam geclaimd en kan een ander team hem niet meer nemen.
