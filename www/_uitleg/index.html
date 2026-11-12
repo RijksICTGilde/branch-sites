@@ -19,9 +19,20 @@
       <nldd-rich-text>
         <p>Elke branch in de repository <a data-repo-link href="#"><span data-repo-name>van de demo</span></a> is een eigen website. Je maakt een branch met de naam van je team, zet er HTML, CSS en afbeeldingen in en pusht. Binnen een paar minuten staat je website op <code><span data-origin></span>/<em>jouw-team</em>/</code>.</p>
 
+        <h2>Werk je met een AI-agent?</h2>
+        <p>Plak de prompt hieronder in je agent, bijvoorbeeld Claude Code, GitHub Copilot of Cursor. De agent richt alles in wat verderop op deze pagina staat, zet je website online en vraagt je daarna wat je wilt maken.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-banner variant="warning" text="Wat je aan je agent geeft, geef je weg" supporting-text="Een token, wachtwoord of API-key die je aan een agent geeft, gaat mee naar de aanbieder van het model en kan in logs terechtkomen. Voor de token van deze demo is dat niet erg, maar wees je ervan bewust. Geef je agent nooit je eigen tokens of wachtwoorden."></nldd-banner>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-code-viewer id="agent-prompt" language="markdown" wrap max-height="360px"></nldd-code-viewer>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-rich-text>
+        <p>Liever zelf aan de slag, of wil je weten wat de agent doet? Dit zijn de stappen.</p>
+
         <h2>Wat heb je nodig</h2>
         <ul>
-          <li><strong>git</strong>, en liefst ook de <a href="https://cli.github.com/">GitHub CLI</a> (<code>gh</code>).</li>
+          <li><strong>git</strong>. De <a href="https://cli.github.com/">GitHub CLI</a> (<code>gh</code>) is handig, maar niet nodig.</li>
           <li>Een <strong>token</strong> waarmee je naar de repository mag pushen. <span data-token-onbekend>Die krijg je van de organisatie.</span><span data-token-bekend hidden>Die staat hieronder, en is in de voorbeelden al ingevuld.</span> Zet hem in de env var <code>GH_TOKEN</code>, niet in een bestand in de repository.</li>
         </ul>
       </nldd-rich-text>
@@ -96,6 +107,37 @@ cd {{name}}</nldd-code-viewer>
     </nldd-simple-section>
   </nldd-page>
 </nldd-shell>
+<script type="text/plain" id="agent-prompt-tekst">Je helpt me een eigen website te publiceren in een demo-omgeving. Richt eerst alles in volgens de stappen hieronder. Vraag me pas daarna wat ik wil maken.
+
+## Hoe de omgeving werkt
+- Elke branch van de GitHub-repository {{repo}} is een eigen statische website.
+- De website van een branch staat op {{origin}}/<branch>/. Hoofdletters worden kleine letters, en alles behalve a-z en 0-9 wordt een streepje.
+- Na een push staat de wijziging er binnen een paar minuten. Er is geen build en geen server: wat in de branch staat, wordt zo geserveerd.
+- Alleen bestanden voor een website worden geserveerd: html, css, js, json, txt, md, xml, svg, afbeeldingen (png, jpg, gif, webp, avif, ico), lettertypen (woff, woff2, ttf, otf), audio en video (mp4, webm, mp3, ogg, wav), pdf en csv. Andere bestanden, zoals zip of exe, worden geblokkeerd.
+
+## Wat je nodig hebt
+- git is nodig. Controleer met `git --version` of het er is.
+- De GitHub CLI (`gh`) is handig, maar niet nodig. Gebruik hem als hij er is.
+- Een token om mee te pushen. {{token-regel}}
+
+## Stappen
+1. Zet de token in de env var GH_TOKEN, nooit in een bestand in de repository:
+   export GH_TOKEN="{{token}}"
+2. Haal de repository op.
+   - Met gh: `gh auth setup-git`, daarna `gh repo clone {{repo}}`.
+   - Zonder gh: `git clone "https://x-access-token:${GH_TOKEN}@github.com/{{repo}}.git"`. De token komt dan in .git/config te staan.
+3. Vraag me hoe mijn team heet en maak daar een branch van: kleine letters, cijfers en streepjes, bijvoorbeeld team-zonnebloem. Bestaat de branch al op GitHub, stap er dan op over in plaats van een nieuwe te maken.
+4. Zet de branch meteen online: maak een eenvoudige index.html, commit, push met `git push -u origin <branch>` en geef me het adres {{origin}}/<branch>/.
+
+## Regels voor het bouwen
+- index.html in de root van de branch is de startpagina.
+- Gebruik relatieve paden (style.css, img/logo.png), nooit paden die met / beginnen: de website staat in een submap.
+- Werk zonder buildstap: HTML, CSS en JavaScript, eventueel met bibliotheken via een CDN.
+- Push alleen naar onze eigen branch. Nooit naar main of naar de branch van een ander team, en nooit force-pushen.
+- Zet geen geheimen in de repository, zoals tokens, wachtwoorden of API-keys. Iedereen in de demo kan alles zien.
+- Commit en push na elke stap die werkt, zodat ik het resultaat online kan bekijken.
+
+Als alles klaar is, vraag me: "Alles is klaar, wat voor web project wil je maken?"</script>
 <script>
   // Fills the repository into the examples. The URL comes from the syncer, without credentials.
   document.querySelectorAll("[data-origin]").forEach(el => { el.textContent = location.origin; });
@@ -113,6 +155,11 @@ cd {{name}}</nldd-code-viewer>
         .replaceAll("{{name}}", name)
         .replaceAll("{{token}}", token || "github_pat_...");
     });
+    document.getElementById("agent-prompt").textContent = document.getElementById("agent-prompt-tekst").textContent
+      .replaceAll("{{repo}}", full)
+      .replaceAll("{{origin}}", location.origin)
+      .replaceAll("{{token-regel}}", token ? "Die staat hieronder al ingevuld." : "Vraag mij om de token die ik van de organisatie kreeg.")
+      .replaceAll("{{token}}", token || "<token>");
     if (match) {
       document.querySelectorAll("[data-repo-name]").forEach(el => { el.textContent = full; });
       document.querySelectorAll("[data-repo-link]").forEach(el => { el.href = `https://github.com/${full}`; });
