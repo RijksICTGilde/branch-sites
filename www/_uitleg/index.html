@@ -126,8 +126,10 @@ cd {{name}}</nldd-code-viewer>
 2. Haal de repository op.
    - Met gh: `gh auth setup-git`, daarna `gh repo clone {{repo}}`.
    - Zonder gh: `git clone "https://x-access-token:${GH_TOKEN}@github.com/{{repo}}.git"`. De token komt dan in .git/config te staan.
-3. Vraag me hoe mijn team heet en maak daar een branch van: kleine letters, cijfers en streepjes, bijvoorbeeld team-zonnebloem. Bestaat de branch al op GitHub, stap er dan op over in plaats van een nieuwe te maken.
-4. Zet de branch meteen online: maak een eenvoudige index.html, commit, push met `git push -u origin <branch>` en geef me het adres {{origin}}/<branch>/.
+3. Vraag me hoe mijn team heet. De branchnaam wordt kleine letters, cijfers en streepjes, bijvoorbeeld team-zonnebloem. Kijk eerst of die branch al op GitHub bestaat, met `git ls-remote --heads origin <branch>`.
+   - Bestaat hij al, meld dat dan en vraag of ik bij dat team hoor of een eigen team wil maken. Hoor ik erbij, stap dan over op die branch. Wil ik een eigen team, vraag dan om een andere naam.
+   - Bestaat hij nog niet, maak de branch dan en push hem meteen met `git push -u origin <branch>`, voordat je iets bouwt. Zo is de naam geclaimd en kan een ander team hem niet meer nemen.
+4. Zet de website meteen online: maak een eenvoudige index.html, commit, push en geef me het adres {{origin}}/<branch>/.
 
 ## Regels voor het bouwen
 - index.html in de root van de branch is de startpagina.
