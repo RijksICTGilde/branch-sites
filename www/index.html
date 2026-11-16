@@ -12,7 +12,7 @@
 <nldd-shell>
   <nldd-page>
     <nldd-simple-section>
-      <nldd-title size="1" heading-level="1" text="Alle websites"></nldd-title>
+      <nldd-title id="titel" size="1" heading-level="1" text="Alle websites"></nldd-title>
       <div id="uitleg" hidden>
         <nldd-spacer size="8"></nldd-spacer>
         <nldd-text color="secondary">Elke branch in de repository is een eigen website. <nldd-link href="/_uitleg/" text="Zo zet je je eigen website erbij"></nldd-link>.</nldd-text>
@@ -86,10 +86,17 @@
     }
   }
 
-  // The sentence with the link to the explanation page is off unless SHOW_EXPLANATION_LINK is set.
-  fetch("/_uitleg.json", { cache: "no-store" })
+  // The heading can be set with SITE_TITLE, for example to the name of the session. It comes from the
+  // environment, not from participants, but goes in as an attribute and as text all the same. The sentence
+  // with the link to the explanation page is off unless SHOW_EXPLANATION_LINK is set.
+  fetch("/_site.json", { cache: "no-store" })
     .then(res => res.ok ? res.json() : {})
-    .then(settings => { document.getElementById("uitleg").hidden = !settings.link_on_index; })
+    .then(({ title, explanation_link }) => {
+      document.getElementById("uitleg").hidden = !explanation_link;
+      if (!title) return;
+      document.title = title;
+      document.getElementById("titel").setAttribute("text", title);
+    })
     .catch(() => {});
 
   search.addEventListener("input", event => {
