@@ -256,6 +256,22 @@ def test_index_lists_pages_of_site_without_index_html(syncer: Syncer, origin: Or
     assert sites["main"]["pages"] == ["index.html"]
 
 
+def test_index_has_titles_of_inner_pages(syncer: Syncer, origin: Origin) -> None:
+    origin.commit(
+        "team",
+        {"kaart/index.html": "<title>Kaart van &amp; locaties</title>", "over.html": "<p>zonder titel</p>"},
+        base="main",
+    )
+
+    syncer.sync()
+
+    sites = {s["slug"]: s for s in index(syncer)["sites"]}
+    titles = sites["team"]["page_titles"]
+    assert titles["kaart/index.html"] == "Kaart van & locaties"
+    assert titles["over.html"] == ""
+    assert set(titles) == set(sites["team"]["pages"])
+
+
 @pytest.mark.parametrize(("token", "shown"), [("github_pat_abc", "github_pat_abc"), ("", None), (None, None)])
 def test_explanation_shows_push_token_only_when_set(tmp_path: Path, token: str | None, shown: str | None) -> None:
     write_explanation(tmp_path, token)

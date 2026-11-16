@@ -16,7 +16,7 @@
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-text color="secondary">Elke branch in de repository is een eigen website. <nldd-link href="/_uitleg/" text="Zo zet je je eigen website erbij"></nldd-link>.</nldd-text>
       <nldd-spacer size="24"></nldd-spacer>
-      <nldd-search-field id="zoek" placeholder="Zoek op teamnaam of titel"></nldd-search-field>
+      <nldd-search-field id="zoek" placeholder="Zoek op teamnaam, titel of pagina"></nldd-search-field>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-text id="aantal" size="sm" color="secondary" aria-live="polite"></nldd-text>
       <nldd-spacer size="4"></nldd-spacer>
@@ -54,15 +54,48 @@
     return item;
   }
 
+  // A page inside a site. Only shown while searching, right below its site.
+  function pageRow(site, page, title) {
+    const item = document.createElement("nldd-list-item");
+    item.setAttribute("href", site.path + page.split("/").map(encodeURIComponent).join("/"));
+    item.dataset.page = "";
+    item.dataset.haystack = [site.name, site.title, page, title].join(" ").toLowerCase();
+    const text = document.createElement("nldd-text-cell");
+    text.setAttribute("text", title || page);
+    text.setAttribute("supporting-text", `Pagina van ${site.title || site.name} · ${page}`);
+    const spacer = document.createElement("nldd-spacer-cell");
+    spacer.setAttribute("size", "12");
+    const chevron = document.createElement("nldd-icon-cell");
+    chevron.setAttribute("size", "20");
+    chevron.setAttribute("color", "secondary");
+    chevron.setAttribute("icon", "chevron-right");
+    item.append(text, spacer, chevron);
+    return item;
+  }
+
+  function rows(site) {
+    const titles = site.page_titles || {};
+    const inner = (site.pages || []).filter(page => page !== "index.html");
+    const siteRow = row(site);
+    // A site is also found by the titles and names of its inner pages.
+    siteRow.dataset.haystack += " " + inner.map(page => `${page} ${titles[page] || ""}`).join(" ").toLowerCase();
+    return [siteRow, ...inner.map(page => pageRow(site, page, titles[page]))];
+  }
+
   function applyFilter() {
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
     const items = [...list.querySelectorAll("nldd-list-item")];
-    let shown = 0;
+    const sites = items.filter(item => !("page" in item.dataset));
+    let shownSites = 0;
+    let shownPages = 0;
     for (const item of items) {
-      item.hidden = !terms.every(t => item.dataset.haystack.includes(t));
-      if (!item.hidden) shown++;
+      const isPage = "page" in item.dataset;
+      const match = terms.every(t => item.dataset.haystack.includes(t));
+      item.hidden = isPage ? !(terms.length && match) : !match;
+      if (!item.hidden) isPage ? shownPages++ : shownSites++;
     }
-    count.textContent = terms.length ? `${shown} van ${items.length} websites` : `${items.length} websites`;
+    const pages = shownPages === 1 ? "1 pagina" : `${shownPages} pagina's`;
+    count.textContent = terms.length ? `${shownSites} van ${sites.length} websites, ${pages}` : `${sites.length} websites`;
   }
 
   async function load() {
@@ -70,7 +103,7 @@
       const res = await fetch("/_index.json", { cache: "no-store" });
       if (!res.ok) return;
       const { sites } = await res.json();
-      const items = sites.map(row);
+      const items = sites.flatMap(rows);
       // nldd-list breaks on items added before it and nldd-list-item are defined, so load those first.
       const holder = document.createElement("div");
       holder.append(...items);

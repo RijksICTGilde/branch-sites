@@ -126,6 +126,11 @@ def _html_pages(site_dir: Path) -> list[str]:
     return pages[:PAGES_MAX]
 
 
+def _page_titles(site_dir: Path, pages: list[str]) -> dict[str, str]:
+    """Titles of the HTML pages, so the index page can find a site by what is on its inner pages."""
+    return {page: _read_title(site_dir / page) for page in pages}
+
+
 def write_explanation(sites_dir: Path, push_token: str | None) -> None:
     """Settings for the explanation page. The push token is meant to be shown: it is what participants push with."""
     tmp = sites_dir / ".uitleg.json.tmp"
@@ -246,18 +251,23 @@ class Syncer:
         log.info("removed /%s/", slug)
 
     def write_index(self, branches: dict[str, Branch]) -> None:
-        sites = [
-            asdict(branch)
-            | {
-                "slug": slug,
-                "path": f"/{slug}/",
-                "title": _read_title(self.sites_dir / slug / "index.html"),
-                "has_index": (self.sites_dir / slug / "index.html").is_file(),
-                "pages": _html_pages(self.data_dir / f"{slug}-{self.published[slug]}"),
-            }
-            for slug, branch in branches.items()
-            if slug in self.published
-        ]
+        sites = []
+        for slug, branch in branches.items():
+            if slug not in self.published:
+                continue
+            site_dir = self.data_dir / f"{slug}-{self.published[slug]}"
+            pages = _html_pages(site_dir)
+            sites.append(
+                asdict(branch)
+                | {
+                    "slug": slug,
+                    "path": f"/{slug}/",
+                    "title": _read_title(self.sites_dir / slug / "index.html"),
+                    "has_index": (self.sites_dir / slug / "index.html").is_file(),
+                    "pages": pages,
+                    "page_titles": _page_titles(site_dir, pages),
+                }
+            )
         sites.sort(key=lambda s: s["date"], reverse=True)
         index = {
             "updated": datetime.now(UTC).isoformat(timespec="seconds"),
