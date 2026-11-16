@@ -65,9 +65,6 @@ jobs:
     concurrency:
       group: deploy-production
       cancel-in-progress: false
-    environment:
-      name: production
-      url: ${{ steps.deploy.outputs.url }}
     steps:
       # The sha tag changes with every commit, so ZAD always sees a new image to roll out.
       # metadata-action lowercases the image name, an image reference must be lowercase
