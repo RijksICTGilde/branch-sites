@@ -54,6 +54,8 @@ De image draait als willekeurige non-root UID (OpenShift). Alles wat schrijft st
 
 Eén component met `publish-on-web`, `authorization-wall` en `temp-storage` op `/tmp`, met een `sizeLimit` zodat één grote commit de node niet volschrijft. Voor wie de demo niet de hele dag laat draaien: ZAD's `sleep-mode` met `wake-mode: auto` werkt hier ook. De wekker toont de laadpagina tot `/healthz` groen is.
 
+Elke push naar `main` bouwt de image en zet hem met [zad-actions](https://github.com/RijksICTGilde/zad-actions) uit op de deployment `production` (project `bsfvc-gl3`, component `site`), met de tag `sha-<commit>`. Daarvoor staat in de GitHub-environment `production` de secret `ZAD_API_KEY`: een token van een serviceaccount met de rol `Ops CI`, want het is een productiedeployment en de workflow vervangt alleen de image.
+
 Nog na te gaan voor de uitrol:
 
 - Komt de pod met de standaard netpol bij `github.com` (op ODCN via de egress-proxy)?
