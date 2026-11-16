@@ -55,3 +55,26 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      # The sha tag changes with every commit, so ZAD always sees a new image to roll out.
+      # metadata-action lowercases the image name, an image reference must be lowercase
+      - id: tag
+        run: echo "image=${IMAGE,,}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - id: deploy
+        uses: RijksICTGilde/zad-actions/deploy@v4
+        with:
+          api-key: ${{ secrets.ZAD_API_KEY }}
+          project-id: bsfvc-gl3
+          deployment-name: production
+          component: site
+          image: ${{ steps.tag.outputs.image }}

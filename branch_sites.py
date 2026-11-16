@@ -131,11 +131,25 @@ def _page_titles(site_dir: Path, pages: list[str]) -> dict[str, str]:
     return {page: _read_title(site_dir / page) for page in pages}
 
 
+def flag(value: str | None) -> bool:
+    """An on/off env var: on for 1, true, yes, ja or on, in any case. Off when unset or anything else."""
+    return (value or "").strip().lower() in ("1", "true", "yes", "ja", "on")
+
+
 def write_explanation(sites_dir: Path, push_token: str | None) -> None:
     """Settings for the explanation page. The push token is meant to be shown: it is what participants push with."""
     tmp = sites_dir / ".uitleg.json.tmp"
     tmp.write_text(json.dumps({"push_token": push_token or None}))
     os.replace(tmp, sites_dir / "_uitleg.json")
+
+
+def write_site(sites_dir: Path, title: str | None, explanation_link: bool = False) -> None:
+    """Settings for the index page. Without a title the page keeps its own heading. explanation_link decides
+    whether it shows the sentence that links to the explanation page."""
+    tmp = sites_dir / ".site.json.tmp"
+    settings = {"title": (title or "").strip() or None, "explanation_link": explanation_link}
+    tmp.write_text(json.dumps(settings, ensure_ascii=False))
+    os.replace(tmp, sites_dir / "_site.json")
 
 
 class Syncer:
@@ -287,6 +301,7 @@ def main() -> int:
     syncer = Syncer(repo_url, SITES_DIR, WORK_DIR, token=os.environ.get("GIT_TOKEN"))
     syncer.reset()
     write_explanation(SITES_DIR, os.environ.get("PUSH_TOKEN"))
+    write_site(SITES_DIR, os.environ.get("SITE_TITLE"), flag(os.environ.get("SHOW_EXPLANATION_LINK")))
     nginx = subprocess.Popen(NGINX_CMD)
 
     stop = threading.Event()

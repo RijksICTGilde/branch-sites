@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import branch_sites
-from branch_sites import GitError, Syncer, auth_env, public_url, slugify, write_explanation
+from branch_sites import GitError, Syncer, auth_env, flag, public_url, slugify, write_explanation, write_site
 
 
 def run(cwd: Path, *args: str) -> None:
@@ -277,3 +277,37 @@ def test_explanation_shows_push_token_only_when_set(tmp_path: Path, token: str |
     write_explanation(tmp_path, token)
 
     assert json.loads((tmp_path / "_uitleg.json").read_text()) == {"push_token": shown}
+
+
+@pytest.mark.parametrize(
+    ("title", "written"),
+    [("Topdag Defensie (13-11-2026)", "Topdag Defensie (13-11-2026)"), ("  ", None), ("", None), (None, None)],
+)
+def test_site_title_only_when_set(tmp_path: Path, title: str | None, written: str | None) -> None:
+    write_site(tmp_path, title)
+
+    assert json.loads((tmp_path / "_site.json").read_text()) == {"title": written, "explanation_link": False}
+
+
+def test_site_explanation_link_follows_flag(tmp_path: Path) -> None:
+    write_site(tmp_path, None, explanation_link=True)
+
+    assert json.loads((tmp_path / "_site.json").read_text())["explanation_link"] is True
+
+
+@pytest.mark.parametrize(
+    ("value", "on"),
+    [
+        (None, False),
+        ("", False),
+        ("0", False),
+        ("false", False),
+        ("nee", False),
+        ("1", True),
+        ("true", True),
+        ("Ja", True),
+        (" on ", True),
+    ],
+)
+def test_flag(value: str | None, on: bool) -> None:
+    assert flag(value) is on

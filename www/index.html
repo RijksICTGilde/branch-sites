@@ -12,9 +12,11 @@
 <nldd-shell>
   <nldd-page>
     <nldd-simple-section>
-      <nldd-title size="1" heading-level="1" text="Alle websites"></nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-text color="secondary">Elke branch in de repository is een eigen website. <nldd-link href="/_uitleg/" text="Zo zet je je eigen website erbij"></nldd-link>.</nldd-text>
+      <nldd-title id="titel" size="1" heading-level="1" text="Alle websites"></nldd-title>
+      <div id="uitleg" hidden>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-text color="secondary">Elke branch in de repository is een eigen website. <nldd-link href="/_uitleg/" text="Zo zet je je eigen website erbij"></nldd-link>.</nldd-text>
+      </div>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-search-field id="zoek" placeholder="Zoek op teamnaam, titel of pagina"></nldd-search-field>
       <nldd-spacer size="16"></nldd-spacer>
@@ -116,6 +118,19 @@
       // Keep the current list; the next refresh tries again.
     }
   }
+
+  // The heading can be set with SITE_TITLE, for example to the name of the session. It comes from the
+  // environment, not from participants, but goes in as an attribute and as text all the same. The sentence
+  // with the link to the explanation page is off unless SHOW_EXPLANATION_LINK is set.
+  fetch("/_site.json", { cache: "no-store" })
+    .then(res => res.ok ? res.json() : {})
+    .then(({ title, explanation_link }) => {
+      document.getElementById("uitleg").hidden = !explanation_link;
+      if (!title) return;
+      document.title = title;
+      document.getElementById("titel").setAttribute("text", title);
+    })
+    .catch(() => {});
 
   search.addEventListener("input", event => {
     query = event.detail?.value ?? event.target?.value ?? "";
