@@ -126,10 +126,18 @@ def _html_pages(site_dir: Path) -> list[str]:
     return pages[:PAGES_MAX]
 
 
-def write_explanation(sites_dir: Path, push_token: str | None) -> None:
-    """Settings for the explanation page. The push token is meant to be shown: it is what participants push with."""
+def flag(value: str | None) -> bool:
+    """An on/off env var: on for 1, true, yes, ja or on, in any case. Off when unset or anything else."""
+    return (value or "").strip().lower() in ("1", "true", "yes", "ja", "on")
+
+
+def write_explanation(sites_dir: Path, push_token: str | None, link_on_index: bool = False) -> None:
+    """Settings for the explanation page. The push token is meant to be shown: it is what participants push with.
+
+    link_on_index decides whether the index page shows the sentence that links to the explanation page.
+    """
     tmp = sites_dir / ".uitleg.json.tmp"
-    tmp.write_text(json.dumps({"push_token": push_token or None}))
+    tmp.write_text(json.dumps({"push_token": push_token or None, "link_on_index": link_on_index}))
     os.replace(tmp, sites_dir / "_uitleg.json")
 
 
@@ -276,7 +284,7 @@ def main() -> int:
 
     syncer = Syncer(repo_url, SITES_DIR, WORK_DIR, token=os.environ.get("GIT_TOKEN"))
     syncer.reset()
-    write_explanation(SITES_DIR, os.environ.get("PUSH_TOKEN"))
+    write_explanation(SITES_DIR, os.environ.get("PUSH_TOKEN"), flag(os.environ.get("SHOW_EXPLANATION_LINK")))
     nginx = subprocess.Popen(NGINX_CMD)
 
     stop = threading.Event()

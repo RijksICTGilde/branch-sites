@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import branch_sites
-from branch_sites import GitError, Syncer, auth_env, public_url, slugify, write_explanation
+from branch_sites import GitError, Syncer, auth_env, flag, public_url, slugify, write_explanation
 
 
 def run(cwd: Path, *args: str) -> None:
@@ -260,4 +260,28 @@ def test_index_lists_pages_of_site_without_index_html(syncer: Syncer, origin: Or
 def test_explanation_shows_push_token_only_when_set(tmp_path: Path, token: str | None, shown: str | None) -> None:
     write_explanation(tmp_path, token)
 
-    assert json.loads((tmp_path / "_uitleg.json").read_text()) == {"push_token": shown}
+    assert json.loads((tmp_path / "_uitleg.json").read_text()) == {"push_token": shown, "link_on_index": False}
+
+
+def test_explanation_link_on_index_follows_flag(tmp_path: Path) -> None:
+    write_explanation(tmp_path, None, link_on_index=True)
+
+    assert json.loads((tmp_path / "_uitleg.json").read_text())["link_on_index"] is True
+
+
+@pytest.mark.parametrize(
+    ("value", "on"),
+    [
+        (None, False),
+        ("", False),
+        ("0", False),
+        ("false", False),
+        ("nee", False),
+        ("1", True),
+        ("true", True),
+        ("Ja", True),
+        (" on ", True),
+    ],
+)
+def test_flag(value: str | None, on: bool) -> None:
+    assert flag(value) is on
