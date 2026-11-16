@@ -69,9 +69,10 @@ jobs:
       name: production
       url: ${{ steps.deploy.outputs.url }}
     steps:
-      # The sha tag changes with every commit, so ZAD always sees a new image to roll out
+      # The sha tag changes with every commit, so ZAD always sees a new image to roll out.
+      # metadata-action lowercases the image name, an image reference must be lowercase
       - id: tag
-        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        run: echo "image=${IMAGE,,}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - id: deploy
         uses: RijksICTGilde/zad-actions/deploy@v4
         with:
@@ -79,4 +80,4 @@ jobs:
           project-id: bsfvc-gl3
           deployment-name: production
           component: site
-          image: ${{ env.IMAGE }}:sha-${{ steps.tag.outputs.sha }}
+          image: ${{ steps.tag.outputs.image }}
