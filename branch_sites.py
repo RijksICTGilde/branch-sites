@@ -133,6 +133,13 @@ def write_explanation(sites_dir: Path, push_token: str | None) -> None:
     os.replace(tmp, sites_dir / "_uitleg.json")
 
 
+def write_site(sites_dir: Path, title: str | None) -> None:
+    """Settings for the index page. Without a title the page keeps its own heading."""
+    tmp = sites_dir / ".site.json.tmp"
+    tmp.write_text(json.dumps({"title": (title or "").strip() or None}, ensure_ascii=False))
+    os.replace(tmp, sites_dir / "_site.json")
+
+
 class Syncer:
     def __init__(self, repo_url: str, sites_dir: Path, work_dir: Path, token: str | None = None) -> None:
         self.repo_url = repo_url
@@ -277,6 +284,7 @@ def main() -> int:
     syncer = Syncer(repo_url, SITES_DIR, WORK_DIR, token=os.environ.get("GIT_TOKEN"))
     syncer.reset()
     write_explanation(SITES_DIR, os.environ.get("PUSH_TOKEN"))
+    write_site(SITES_DIR, os.environ.get("SITE_TITLE"))
     nginx = subprocess.Popen(NGINX_CMD)
 
     stop = threading.Event()
